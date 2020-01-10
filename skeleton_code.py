@@ -2,6 +2,7 @@ import os
 import sys
 import time
 import random
+from heapq import heappop, heappush
 
 def read_file_into_string(input_file, from_ord, to_ord):
     # take a file "input_file", read it character by character, strip away all unwanted
@@ -162,15 +163,15 @@ else:
 ############ YOU NEED TO INCLUDE THE FOLLOWING PARAMETERS:                                 ############
 ############ "my_user_name" = your user-name, e.g., mine is dcs0ias                        ############
 
-my_user_name = "dcs0ias"
+my_user_name = "fdmw97"
 
 ############ "my_first_name" = your first name, e.g., mine is Iain                         ############
 
-my_first_name = "Iain"
+my_first_name = "Benjamin"
 
 ############ "my_last_name" = your last name, e.g., mine is Stewart                        ############
 
-my_last_name = "Stewart"
+my_last_name = "Russell"
 
 ############ "alg_code" = the two-digit code that tells me which algorithm you have        ############
 ############ implemented (see the assignment pdf), where the codes are:                    ############
@@ -184,7 +185,7 @@ my_last_name = "Stewart"
 ############    SA = simulated annealing search                                            ############
 ############    GA = genetic algorithm                                                     ############
 
-alg_code = "BG"
+alg_code = "AS"
 
 ############ you can also add a note that will be added to the end of the output file if   ############
 ############ you like, e.g., "in my basic greedy search, I broke ties by always visiting   ############
@@ -209,6 +210,39 @@ codes_and_names = {'BF' : 'brute-force search',
 #######################################################################################################
 ############    now the code for your algorithm should begin                               ############
 #######################################################################################################
+states = []
+parents = []
+actions = []
+pathCosts = []
+depths = []
+fringe = []
+
+def registerNode(state, parent, action, pathCost, depth):
+    states.append(state)
+    parents.append(parent)
+    actions.append(action)
+    pathCosts.append(pathCost)
+    depths.append(depth)
+
+def fValue(nodeId):
+    # change later
+    return 0
+
+def isGoalNode(nodeId):
+    # change later
+    return False
+
+def aStarSearch():
+    newid = 1
+    registerNode([0], '-', '-', 0, 0)
+    heappush(fringe, (1, (newid, states[newid], parents[newid], actions[newid], pathCosts[newid], depths[newid])))
+    if isGoalNode(newid):
+        return newid
+    while fringe:
+        
+    
+
+
 
         
 
