@@ -239,7 +239,11 @@ def aStarSearch():
     if isGoalNode(newid):
         return newid
     while fringe:
-        
+        expand = heappop(fringe)[1]
+        if(len(expand[1]) == num_cities):
+            
+        for i in range(1, num_cities):
+
     
 
 
