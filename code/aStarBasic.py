@@ -211,32 +211,40 @@ codes_and_names = {'BF' : 'brute-force search',
 ############    now the code for your algorithm should begin                               ############
 #######################################################################################################
 states = []
-parents = []
 pathCosts = []
 fringe = []
 
-def registerNode(state, parent, pathCost):
+def registerNode(state, pathCost):
     states.append(state[::])
-    parents.append(parent)
     pathCosts.append(pathCost)
 
 def fValue(nodeId):
     h = 0
     state = states[nodeId][::]
-    if len(state) < num_cities:
+    if len(state) < num_cities - 2:
         unvisitedNeighbours = []
-        for i in distance_matrix[state[-1]]:
+        for i in range(0, num_cities):
             if i not in state:
                 unvisitedNeighbours.append(i)
-        h = min(unvisitedNeighbours)
+        nearestNeighbour = unvisitedNeighbours[0]
+        for i in unvisitedNeighbours:
+            if distance_matrix[state[-1]][i] < distance_matrix[state[-1]][nearestNeighbour]:
+                nearestNeighbour = i
+        distNeighbour = distance_matrix[state[-1]][nearestNeighbour]
+        state.append(nearestNeighbour)
+        unvisitedNeighbours = []
+        for i in range(0, num_cities):
+            if i not in state:
+                unvisitedNeighbours.append(distance_matrix[state[0]][i])
+        h = distNeighbour + min(unvisitedNeighbours)
     return pathCosts[nodeId] + h
 
 def isGoalNode(nodeId):
-    return (len(states[nodeId]) == num_cities + 1)
+    return (len(states[nodeId]) == num_cities)
 
 def aStarSearch():
     newid = 0
-    registerNode([0], '-', 0)
+    registerNode([0], 0)
     heappush(fringe, (1, newid))
     # if start node is goal node return it
     if isGoalNode(newid):
@@ -246,17 +254,14 @@ def aStarSearch():
         # return node if it is a goal node with lowest f value
         if isGoalNode(fringeid):
             return fringeid
-        # if we have a state with all cities in it once
         state = states[fringeid]
-        if(len(state) == num_cities):
-            newid += 1
-            registerNode(state + [state[0]], fringeid, pathCosts[fringeid] + distance_matrix[state[0]][state[-1]])
-            heappush(fringe, (fValue(newid), newid))
-            continue
         for i in range(1, num_cities):
             if i not in state:
                 newid += 1
-                registerNode(state + [i], fringeid, pathCosts[fringeid] + distance_matrix[state[-1]][i])
+                if len(state) == num_cities - 1:
+                    registerNode(state + [i], pathCosts[fringeid] + distance_matrix[state[-1]][i] + distance_matrix[i][state[0]])
+                else:
+                    registerNode(state + [i], pathCosts[fringeid] + distance_matrix[state[-1]][i])
                 heappush(fringe, (fValue(newid), newid))
     return 0
 

@@ -1,4 +1,0 @@
-USER = fdmw97 (Benjamin Russell)
-ALGORITHM = AS, FILENAME = AISearchfile012
-NUMBER OF CITIES = 12, TOUR LENGTH = 63
-0,5,11,9,10,8,3,1,7,4,6,2
