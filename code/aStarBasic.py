@@ -243,6 +243,7 @@ def isGoalNode(nodeId):
     return (len(states[nodeId]) == num_cities)
 
 def aStarSearch():
+    global fringe
     newid = 0
     registerNode([0], 0)
     heappush(fringe, (1, newid))
@@ -263,6 +264,8 @@ def aStarSearch():
                 else:
                     registerNode(state + [i], pathCosts[fringeid] + distance_matrix[state[-1]][i])
                 heappush(fringe, (fValue(newid), newid))
+                if len(fringe) > 1000:
+                    fringe = fringe[0:250]
     return 0
 
 resNode = aStarSearch()

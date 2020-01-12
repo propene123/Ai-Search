@@ -237,10 +237,13 @@ def isGoalNode(state):
     return (len(state) == num_cities)
 
 def aStarSearch():
+    global fringe
     newid = 0
     heappush(fringe, (1, 1, [0], 0, newid))
     # if start node is goal node return it
     while fringe:
+        if len(fringe) > 1000:
+            fringe = fringe[0:500]
         fringeid = heappop(fringe)
         # return node if it is a goal node with lowest f value
         state = fringeid[2]
