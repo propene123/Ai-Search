@@ -216,21 +216,27 @@ pathCosts = []
 fringe = []
 
 def registerNode(state, parent, pathCost):
-    states.append(state)
+    states.append(state[::])
     parents.append(parent)
     pathCosts.append(pathCost)
 
 def fValue(nodeId):
-    
-    return 0
+    h = 0
+    state = states[nodeId][::]
+    if len(state) < num_cities:
+        unvisitedNeighbours = []
+        for i in distance_matrix[state[-1]]:
+            if i not in state:
+                unvisitedNeighbours.append(i)
+        h = min(unvisitedNeighbours)
+    return pathCosts[nodeId] + h
 
 def isGoalNode(nodeId):
-    # change later
-    return False
+    return (len(states[nodeId]) == num_cities + 1)
 
 def aStarSearch():
-    newid = 1
-    registerNode([0], '-', 0, 0)
+    newid = 0
+    registerNode([0], '-', 0)
     heappush(fringe, (1, newid))
     # if start node is goal node return it
     if isGoalNode(newid):
@@ -242,20 +248,21 @@ def aStarSearch():
             return fringeid
         # if we have a state with all cities in it once
         state = states[fringeid]
-        if(len(state)) == num_cities):
+        if(len(state) == num_cities):
             newid += 1
-            registerNode(state + state[0], fringeid, pathCosts[fringeid] + distance_matrix[state[0]][state[-1]])
+            registerNode(state + [state[0]], fringeid, pathCosts[fringeid] + distance_matrix[state[0]][state[-1]])
             heappush(fringe, (fValue(newid), newid))
             continue
         for i in range(1, num_cities):
             if i not in state:
                 newid += 1
-                registerNode(state + i, fringeid, pathCosts[fringeid] + distance_matrix[state[-1]][i])
+                registerNode(state + [i], fringeid, pathCosts[fringeid] + distance_matrix[state[-1]][i])
                 heappush(fringe, (fValue(newid), newid))
     return 0
 
-    
-
+resNode = aStarSearch()
+tour = states[resNode]
+tour_length = pathCosts[resNode]
 
 
         
