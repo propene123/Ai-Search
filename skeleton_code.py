@@ -212,20 +212,16 @@ codes_and_names = {'BF' : 'brute-force search',
 #######################################################################################################
 states = []
 parents = []
-actions = []
 pathCosts = []
-depths = []
 fringe = []
 
-def registerNode(state, parent, action, pathCost, depth):
+def registerNode(state, parent, pathCost):
     states.append(state)
     parents.append(parent)
-    actions.append(action)
     pathCosts.append(pathCost)
-    depths.append(depth)
 
 def fValue(nodeId):
-    # change later
+    
     return 0
 
 def isGoalNode(nodeId):
@@ -234,15 +230,29 @@ def isGoalNode(nodeId):
 
 def aStarSearch():
     newid = 1
-    registerNode([0], '-', '-', 0, 0)
-    heappush(fringe, (1, (newid, states[newid], parents[newid], actions[newid], pathCosts[newid], depths[newid])))
+    registerNode([0], '-', 0, 0)
+    heappush(fringe, (1, newid))
+    # if start node is goal node return it
     if isGoalNode(newid):
         return newid
     while fringe:
-        expand = heappop(fringe)[1]
-        if(len(expand[1]) == num_cities):
-            
+        fringeid = heappop(fringe)[1]
+        # return node if it is a goal node with lowest f value
+        if isGoalNode(fringeid):
+            return fringeid
+        # if we have a state with all cities in it once
+        state = states[fringeid]
+        if(len(state)) == num_cities):
+            newid += 1
+            registerNode(state + state[0], fringeid, pathCosts[fringeid] + distance_matrix[state[0]][state[-1]])
+            heappush(fringe, (fValue(newid), newid))
+            continue
         for i in range(1, num_cities):
+            if i not in state:
+                newid += 1
+                registerNode(state + i, fringeid, pathCosts[fringeid] + distance_matrix[state[-1]][i])
+                heappush(fringe, (fValue(newid), newid))
+    return 0
 
     
 
