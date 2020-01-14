@@ -2,7 +2,7 @@ import os
 import sys
 import time
 import random
-from heapq import heappop, heappush
+from heapq import heappop, heappush, heapify
 
 def read_file_into_string(input_file, from_ord, to_ord):
     # take a file "input_file", read it character by character, strip away all unwanted
@@ -268,6 +268,8 @@ def aStarSearch():
                     fringe = fringe[0:250]
     return 0
 
+startTime = time.time()
+
 resNode = aStarSearch()
 tour = states[resNode]
 tour_length = pathCosts[resNode]
@@ -335,7 +337,7 @@ if flag == "good":
     print("I have successfully written the tour to the output file " + output_file_name + ".")
     
     
-
+print(time.time() - startTime)
 
 
 

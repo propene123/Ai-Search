@@ -2,7 +2,7 @@ import os
 import sys
 import time
 import random
-from heapq import heappop, heappush
+from heapq import heappop, heappush, heapify
 
 def read_file_into_string(input_file, from_ord, to_ord):
     # take a file "input_file", read it character by character, strip away all unwanted
@@ -210,59 +210,65 @@ codes_and_names = {'BF' : 'brute-force search',
 #######################################################################################################
 ############    now the code for your algorithm should begin                               ############
 #######################################################################################################
-# states = []
-# pathCosts = []
+states = []
+pathCosts = []
 fringe = []
 
-# def registerNode(state, pathCost):
-#     states.append(state)
-#     pathCosts.append(pathCost)
+def registerNode(state, pathCost):
+    states.append(state[::])
+    pathCosts.append(pathCost)
 
-def fValue(state):
+def fValue(nodeId):
     h = 0
-    if len(state) < num_cities:
+    state = states[nodeId][::]
+    k = 0
+    while len(state) < num_cities:
         unvisitedNeighbours = []
         for i in range(0, num_cities):
             if i not in state:
-                unvisitedNeighbours.append(i)
-        nearestNeighbour = unvisitedNeighbours[0]
-        for i in unvisitedNeighbours:
-            if distance_matrix[state[-1]][i] < distance_matrix[state[-1]][nearestNeighbour]:
-                nearestNeighbour = i
-        distNeighbour = distance_matrix[state[-1]][nearestNeighbour]
-        h = distNeighbour
-    return h
+                unvisitedNeighbours.append(distance_matrix[state[-1]][i])
+        dist = min(unvisitedNeighbours)
+        state.append(distance_matrix[state[-1]].index(dist))
+        h += dist
+        k += 1
+    return pathCosts[nodeId] + h
 
-def isGoalNode(state):
-    return (len(state) == num_cities)
+def isGoalNode(nodeId):
+    return (len(states[nodeId]) == num_cities)
 
 def aStarSearch():
     global fringe
     newid = 0
-    heappush(fringe, (1, 1, [0], 0, newid))
+    registerNode([0], 0)
+    heappush(fringe, (1, newid))
     # if start node is goal node return it
+    if isGoalNode(newid):
+        return newid
     while fringe:
-        if len(fringe) > 1000:
-            fringe = fringe[0:500]
-        fringeid = heappop(fringe)
+        fringeid = heappop(fringe)[1]
         # return node if it is a goal node with lowest f value
-        state = fringeid[2]
-        if isGoalNode(state):
-            return (state, fringeid[3])
+        if isGoalNode(fringeid):
+            print(len(fringe))
+            return fringeid
+        state = states[fringeid]
         for i in range(1, num_cities):
             if i not in state:
                 newid += 1
                 if len(state) == num_cities - 1:
-                    cost = fringeid[3] + distance_matrix[state[-1]][i] + distance_matrix[i][state[0]]
-                    heappush(fringe, (fValue(state) + cost, 1/len(state), state + [i], cost, newid))
+                    registerNode(state + [i], pathCosts[fringeid] + distance_matrix[state[-1]][i] + distance_matrix[i][state[0]])
                 else:
-                    cost = fringeid[3] + distance_matrix[state[-1]][i]
-                    heappush(fringe, (fValue(state) + cost, 1/len(state), state + [i], cost, newid))
+                    registerNode(state + [i], pathCosts[fringeid] + distance_matrix[state[-1]][i])
+                heappush(fringe, (fValue(newid), newid))
+                if len(fringe) > 100:
+                    fringe.sort(key=lambda id: id[0])
+                    fringe = fringe[0:1]
     return 0
 
+startTime = time.time()
+
 resNode = aStarSearch()
-tour = resNode[0]
-tour_length = resNode[1]
+tour = states[resNode]
+tour_length = pathCosts[resNode]
 
 
         
@@ -327,7 +333,7 @@ if flag == "good":
     print("I have successfully written the tour to the output file " + output_file_name + ".")
     
     
-
+print(time.time() - startTime)
 
 
 
