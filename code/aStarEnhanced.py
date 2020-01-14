@@ -218,11 +218,8 @@ def registerNode(state, pathCost):
     states.append(state[::])
     pathCosts.append(pathCost)
 
-kek = 0
 
 def fValue(nodeId):
-    global kek
-    kek += 1
     h = 0
     state = states[nodeId][::]
     if len(state) < num_cities:
@@ -239,6 +236,31 @@ def fValue(nodeId):
             unvisitedNeighbours.pop(minNeighbourIndex)
         h += distance_matrix[state[-1]][0]
     return pathCosts[nodeId] + h
+
+def length(path):
+    length = 0;
+    for i in range(0, len(path)-1):
+        length += distance_matrix[path[i]][path[i+1]]
+    length += distance_matrix[path[-1]][path[0]]
+    return length
+
+
+def optTour(state):
+    best = state
+    improvement = True
+    while improvement:
+        improvement = False
+        for i in range(1, len(state) - 2):
+            for j in range(i+1, len(state)):
+                if j-1 == 1:
+                    continue
+                newPath = state[::]
+                newPath[i:j] = state[j-1:i-1:-1]
+                if(length(newPath) < length(best)):
+                    best = newPath
+                    improvement = True
+    return best
+            
 
 def isGoalNode(nodeId):
     return (len(states[nodeId]) == num_cities)
@@ -271,7 +293,8 @@ startTime = time.time()
 
 resNode = aStarSearch()
 tour = states[resNode]
-tour_length = pathCosts[resNode]
+tour = optTour(tour)
+tour_length = length(tour)
 
     
 
