@@ -218,7 +218,11 @@ def registerNode(state, pathCost):
     states.append(state[::])
     pathCosts.append(pathCost)
 
+kek = 0
+
 def fValue(nodeId):
+    global kek
+    kek += 1
     h = 0
     state = states[nodeId][::]
     if len(state) < num_cities:
@@ -243,12 +247,12 @@ def aStarSearch():
     global fringe
     newid = 0
     registerNode([0], 0)
-    heappush(fringe, (1, newid))
+    heappush(fringe, (1, 1, newid))
     # if start node is goal node return it
     if isGoalNode(newid):
         return newid
     while fringe:
-        fringeid = heappop(fringe)[1]
+        fringeid = heappop(fringe)[2]
         # return node if it is a goal node with lowest f value
         if isGoalNode(fringeid):
             return fringeid
@@ -260,10 +264,7 @@ def aStarSearch():
                     registerNode(state + [i], pathCosts[fringeid] + distance_matrix[state[-1]][i] + distance_matrix[i][state[0]])
                 else:
                     registerNode(state + [i], pathCosts[fringeid] + distance_matrix[state[-1]][i])
-                heappush(fringe, (fValue(newid), newid))
-                if len(fringe) > 1000:
-                    fringe.sort(key=lambda id: id[0])
-                    fringe = fringe[0:500]
+                heappush(fringe, (fValue(newid), 1/len(states[newid]), newid))
     return 0
 
 startTime = time.time()
@@ -272,8 +273,7 @@ resNode = aStarSearch()
 tour = states[resNode]
 tour_length = pathCosts[resNode]
 
-
-        
+    
 
 
 
