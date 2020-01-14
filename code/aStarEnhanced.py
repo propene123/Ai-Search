@@ -287,6 +287,9 @@ def aStarSearch():
                 else:
                     registerNode(state + [i], pathCosts[fringeid] + distance_matrix[state[-1]][i])
                 heappush(fringe, (fValue(newid), 1/len(states[newid]), newid))
+                if len(fringe) > 100:
+                        fringe.sort(key=lambda id: id[0])
+                        fringe = fringe[0:10]
     return 0
 
 startTime = time.time()
