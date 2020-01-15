@@ -185,7 +185,7 @@ my_last_name = "Russell"
 ############    SA = simulated annealing search                                            ############
 ############    GA = genetic algorithm                                                     ############
 
-alg_code = "AS"
+alg_code = "GA"
 
 ############ you can also add a note that will be added to the end of the output file if   ############
 ############ you like, e.g., "in my basic greedy search, I broke ties by always visiting   ############
@@ -210,98 +210,84 @@ codes_and_names = {'BF' : 'brute-force search',
 #######################################################################################################
 ############    now the code for your algorithm should begin                               ############
 #######################################################################################################
-states = []
-pathCosts = []
-fringe = []
+allNodes = list(range(0, num_cities))
+populationSize = 100
+population = {}
+mutateProb = 1
+iterations = 60000
+random.seed()
 
-def registerNode(state, pathCost):
-    states.append(state[::])
-    pathCosts.append(pathCost)
+def fitness(state):
+    fitness = 0
+    for i in range(0, len(state)-1):
+        fitness += distance_matrix[state[i]][state[i+1]]
+    fitness += distance_matrix[state[-1]][state[0]]
+    return fitness  
 
-
-def fValue(nodeId):
-    h = 0
-    state = states[nodeId][::]
-    if len(state) < num_cities:
-        unvisitedNeighbours = list(set(range(0, num_cities)) - set(state))
-        while unvisitedNeighbours:
-            minNeighbour = unvisitedNeighbours[0]
-            minNeighbourIndex = 0
-            for i in range(0, len(unvisitedNeighbours)):
-                if distance_matrix[state[-1]][unvisitedNeighbours[i]] < distance_matrix[state[-1]][minNeighbour]:
-                    minNeighbour = unvisitedNeighbours[i]
-                    minNeighbourIndex = i
-            h += distance_matrix[state[-1]][minNeighbour]
-            state.append(minNeighbour)
-            unvisitedNeighbours.pop(minNeighbourIndex)
-        h += distance_matrix[state[-1]][0]
-    return pathCosts[nodeId] + h
-
-def length(path):
-    length = 0;
-    for i in range(0, len(path)-1):
-        length += distance_matrix[path[i]][path[i+1]]
-    length += distance_matrix[path[-1]][path[0]]
-    return length
-
-
-def optTour(state):
-    best = state
-    improvement = True
-    while improvement:
-        improvement = False
-        for i in range(1, len(state) - 2):
-            for j in range(i+1, len(state)):
-                if j-1 == 1:
-                    continue
-                newPath = state[::]
-                newPath[i:j] = state[j-1:i-1:-1]
-                if(length(newPath) < length(best)):
-                    best = newPath
-                    improvement = True
-    return best
-            
-
-def isGoalNode(nodeId):
-    return (len(states[nodeId]) == num_cities)
-
-def aStarSearch():
-    global fringe
-    newid = 0
-    registerNode([0], 0)
-    heappush(fringe, (1, 1, newid))
-    # if start node is goal node return it
-    if isGoalNode(newid):
-        return newid
-    while fringe:
-        fringeid = heappop(fringe)[2]
-        # return node if it is a goal node with lowest f value
-        if isGoalNode(fringeid):
-            return fringeid
-        state = states[fringeid]
-        for i in range(1, num_cities):
-            if i not in state:
-                newid += 1
-                if len(state) == num_cities - 1:
-                    registerNode(state + [i], pathCosts[fringeid] + distance_matrix[state[-1]][i] + distance_matrix[i][state[0]])
-                else:
-                    registerNode(state + [i], pathCosts[fringeid] + distance_matrix[state[-1]][i])
-                heappush(fringe, (fValue(newid), 1/len(states[newid]), newid))
-                if len(fringe) > 100:
-                        fringe.sort(key=lambda id: id[0])
-                        fringe = fringe[0:10]
-    return 0
-
-
-resNode = aStarSearch()
-tour = states[resNode]
-tour = optTour(tour)
-tour_length = length(tour)
-
-    
+def mutate(state):
+    if random.randrange(0, 100) <= mutateProb:
+        index1 = random.randrange(0, len(state))
+        index2 = random.randrange(0, len(state))
+        state[index1], state[index2] = state[index2], state[index1]
 
 
 
+def breed(p1, p2):
+    splitIndex = random.randrange(0, num_cities)
+    child1 = []
+    child2 = []
+    child1.extend(p1[0:splitIndex+1])
+    child1.extend(p2[splitIndex + 1:])
+    child2.extend(p2[0:splitIndex+1])
+    child2.extend(p1[splitIndex + 1:])
+    for i in range(0, len(child1)):
+        if child1[i] not in child2:
+            for j in range(0, len(child2)):
+                if child2[j] not in child1:
+                    child1[i], child2[j] = child2[j], child1[i]
+    mutate(child1)
+    return child1
+
+
+startTime = time.time()
+
+# gen initial population
+worstFitness = 0
+for i in range(0, populationSize):
+    newPop = allNodes[::]
+    random.shuffle(newPop)
+    newFitness = fitness(newPop)
+    population[newFitness] = newPop
+for i in range(0, iterations):
+    worstFitness = max(population) + 1
+    newPopulation = {}
+    total = 0
+    for j in population.keys():
+        total += (worstFitness - j)
+    theWheel = []
+    cumulativeRelativeFitness = 0
+    for j in population.keys():
+        cumulativeRelativeFitness += (worstFitness - j)/total
+        theWheel.append(cumulativeRelativeFitness)
+    p1 = []
+    p2 = []
+    for j in range(0, populationSize):
+        select = random.uniform(0,1)
+        for k, key in enumerate(population):
+            if select <= theWheel[k]:
+                p1 = population[key]
+                break
+        select = random.uniform(0,1)
+        for k, key in enumerate(population):
+            if select <= theWheel[k]:
+                p2 = population[key]
+                break
+        child1 = breed(p1, p2)
+        newPopulation[fitness(child1)] = child1
+    population = newPopulation.copy()
+
+tour_length = min(population)
+tour = population[tour_length]
 
 
 
@@ -361,7 +347,7 @@ if flag == "good":
     
     
 
-
+print(time.time() - startTime)
 
 
 
