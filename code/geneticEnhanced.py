@@ -214,6 +214,7 @@ allNodes = list(range(0, num_cities))
 populationSize = 100
 population = {}
 mutateProb = 0.03
+crossoverRate = 0.7
 iterations = 500
 random.seed()
 
@@ -233,18 +234,31 @@ def mutate(state):
 
 
 def breed(p1, p2):
-    splitIndex = random.randrange(0, num_cities)
     child1 = []
-    child2 = []
-    child1.extend(p1[0:splitIndex+1])
-    child1.extend(p2[splitIndex + 1:])
-    child2.extend(p2[0:splitIndex+1])
-    child2.extend(p1[splitIndex + 1:])
-    for i in range(0, len(child1)):
-        if child1[i] not in child2:
-            for j in range(0, len(child2)):
-                if child2[j] not in child1:
-                    child1[i], child2[j] = child2[j], child1[i]
+    selectIndex = random.randrange(0, num_cities)
+    selectIndex2 = selectIndex
+    while selectIndex2 == selectIndex:
+        selectIndex2 = random.randrange(0, num_cities)
+    if selectIndex2 < selectIndex:
+        selectIndex, selectIndex2 = selectIndex2, selectIndex
+    child1.extend(p1[0:selectIndex+1])
+    seg1 = p2[0:selectIndex+1]
+    seg2 = p2[selectIndex+1:selectIndex2+1]
+    seg3 = p2[selectIndex2+1:]
+    for i in seg2:
+        if i not in child1:
+            child1.append(i)
+        else:
+            for j in seg1:
+                if j not in child1:
+                    child1.append(j)
+    for i in seg3:
+        if i not in child1:
+            child1.append(i)
+        else:
+            for j in seg1:
+                if j not in child1:
+                    child1.append(j)
     mutate(child1)
     return child1
 
@@ -261,6 +275,11 @@ for i in range(0, populationSize):
 for i in range(0, iterations):
     worstFitness = max(population) + 1
     newPopulation = {}
+
+    fittest = min(population)
+    newPopulation[fittest] = population[fittest]
+
+
     total = 0
     for j in population.keys():
         total += (worstFitness - j)
@@ -269,9 +288,9 @@ for i in range(0, iterations):
     for j in population.keys():
         cumulativeRelativeFitness += (worstFitness - j)/total
         theWheel.append(cumulativeRelativeFitness)
-    p1 = []
-    p2 = []
-    for j in range(0, populationSize):
+
+    
+    for j in range(0, populationSize-10):
         select = random.uniform(0,1)
         for k, key in enumerate(population):
             if select <= theWheel[k]:
@@ -282,8 +301,12 @@ for i in range(0, iterations):
             if select <= theWheel[k]:
                 p2 = population[key]
                 break
-        child1 = breed(p1, p2)
-        newPopulation[fitness(child1)] = child1
+        crossover = random.uniform(0, 1)
+        if crossover <= crossoverRate:
+            child1 = breed(p1, p2)
+            newPopulation[fitness(child1)] = child1
+        else:
+            newPopulation[fitness(p1)] = p1
     population = newPopulation.copy()
 
 tour_length = min(population)
