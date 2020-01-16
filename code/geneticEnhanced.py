@@ -277,12 +277,10 @@ startTime = time.time()
 worstFitness = 0
 
 newPop = allNodes[::]
-random.shuffle(newPop)
-newFitness = fitness(newPop)
-population[newFitness] = newPop
-for i in range(0, populationSize-1):
-    modPop = mutate(newPop)
-    population[fitness(newPop)] = modPop
+for i in range(0, populationSize):
+    random.shuffle(newPop)
+    newFitness = fitness(newPop)
+    population[newFitness] = newPop
 for i in range(0, iterations):
     worstFitness = max(population) + 1
     newPopulation = {}
