@@ -214,7 +214,7 @@ allNodes = list(range(0, num_cities))
 populationSize = 100
 population = {}
 mutateProb = 0.3
-crossoverRate = 1
+crossoverRate = 0.7
 iterations = 10000
 random.seed()
 
@@ -270,17 +270,30 @@ def breed(p1, p2):
         return child1
     
 
+def greedy(state):
+    res = state[::]
+    if len(res) < num_cities:
+        unvisitedNeighbours = list(set(range(0, num_cities)) - set(res))
+        while unvisitedNeighbours:
+            minNeighbour = unvisitedNeighbours[0]
+            minNeighbourIndex = 0
+            for i in range(0, len(unvisitedNeighbours)):
+                if distance_matrix[res[-1]][unvisitedNeighbours[i]] < distance_matrix[res[-1]][minNeighbour]:
+                    minNeighbour = unvisitedNeighbours[i]
+                    minNeighbourIndex = i
+            res.append(minNeighbour)
+            unvisitedNeighbours.pop(minNeighbourIndex)
+    return res
+
 
 startTime = time.time()
 
 # gen initial population
 worstFitness = 0
-
-newPop = allNodes[::]
 for i in range(0, populationSize):
-    random.shuffle(newPop)
-    newFitness = fitness(newPop)
-    population[newFitness] = newPop
+    newPop = [random.randrange(0, num_cities)]
+    newPop = greedy(newPop)
+    population[fitness(newPop)] = newPop
 for i in range(0, iterations):
     worstFitness = max(population) + 1
     newPopulation = {}
