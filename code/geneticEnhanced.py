@@ -213,9 +213,9 @@ codes_and_names = {'BF' : 'brute-force search',
 allNodes = list(range(0, num_cities))
 populationSize = 100
 population = {}
-mutateProb = 0.05
-crossoverRate = 1
-iterations = 500
+mutateProb = 0.015
+crossoverRate = 0.7
+iterations = 40000
 random.seed()
 
 def fitness(state):
@@ -226,33 +226,59 @@ def fitness(state):
     return fitness  
 
 def mutate(state):
-    select = random.uniform(0, 1)
-    best = state
-    if select <= mutateProb:
-        improvement = True
-        while improvement:
-            improvement = False
-            for i in range(1, len(state) - 2):
-                for j in range(i+1, len(state)):
-                    if j-1 == 1:
-                        continue
-                    newPath = state[::]
-                    newPath[i:j] = state[j-1:i-1:-1]
-                    if(fitness(newPath) < fitness(best)):
-                        best = newPath
-                        improvement = True
-    return best
+    res = state[::]
+    chance = random.uniform(0, 1)
+    if chance <= mutateProb:
+        res = []
+        select = random.randrange(0, len(state))
+        select2 = random.randrange(0, len(state))
+        if select2 < select:
+            select, select2 = select2, select
+        splice = state[select:select2+1]
+        splice = reversed(splice)
+        res.extend(state[0:select])
+        res.extend(splice)
+        res.extend(state[select2+1:])
+    return res
+    # best = state
+    # bestDist = fitness(state)
+    # if select <= mutateProb:
+    #     improvement = True
+    #     while improvement:
+    #         improvement = False
+    #         for i in range(1, len(state) - 2):
+    #             for j in range(i+1, len(state)):
+    #                 if j-1 == 1:
+    #                     continue
+    #                 newPath = state[::]
+    #                 newPath[i:j] = state[j-1:i-1:-1]
+    #                 newDist = fitness(newPath)
+    #                 if(newDist < bestDist):
+    #                     best = newPath
+    #                     bestDist = newDist
+    #                     improvement = True
 
 
 
 def breed(p1, p2):
     child1 = []
+    for i in range(0, num_cities):
+        child1.append(-1)
     select = random.randrange(0, num_cities)
-    child1 = p1[0:select+1]
-    newNodes = list(set(p2) - set(child1))
-    child1.extend(newNodes)
-
+    select2 = random.randrange(0, num_cities)
+    if select2 < select:
+        select, select2 = select2, select
+    child1[0:select+1] = p1[0:select+1]
+    child1[select2+1:] = p1[select2+1:]
+    unused = list(set(p2) - set(child1))
+    for i in range(select+1, select2+1):
+        child1[i] = unused.pop(0)
     child1 = mutate(child1)
+    # select = random.randrange(0, num_cities)
+    # child1 = p1[0:select+1]
+    # newNodes = list(set(p2) - set(child1))
+    # child1.extend(newNodes)
+    # child1 = mutate(child1)
     return child1
 
 

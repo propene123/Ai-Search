@@ -213,8 +213,8 @@ codes_and_names = {'BF' : 'brute-force search',
 allNodes = list(range(0, num_cities))
 populationSize = 100
 population = {}
-mutateProb = 0.03
-iterations = 500
+mutateProb = 0.015
+iterations = 40000
 random.seed()
 
 def fitness(state):
@@ -225,28 +225,32 @@ def fitness(state):
     return fitness  
 
 def mutate(state):
+    res = state[::]
     if random.uniform(0, 1) <= mutateProb:
-        index1 = random.randrange(0, len(state))
-        index2 = random.randrange(0, len(state))
-        state[index1], state[index2] = state[index2], state[index1]
+        index1 = random.randrange(0, len(res))
+        index2 = random.randrange(0, len(res))
+        res[index1], res[index2] = res[index2], res[index1]
+    return res
 
 
 
 def breed(p1, p2):
     splitIndex = random.randrange(0, num_cities)
-    child1 = []
-    child2 = []
-    child1.extend(p1[0:splitIndex+1])
-    child1.extend(p2[splitIndex + 1:])
-    child2.extend(p2[0:splitIndex+1])
-    child2.extend(p1[splitIndex + 1:])
-    for i in range(0, len(child1)):
-        if child1[i] not in child2:
-            for j in range(0, len(child2)):
-                if child2[j] not in child1:
-                    child1[i], child2[j] = child2[j], child1[i]
-    mutate(child1)
-    return child1
+    select = random.randrange(0, num_cities)
+    child1 = p1[0:select+1]
+    newNodes = list(set(p2) - set(child1))
+    child1.extend(newNodes)
+    child1 = mutate(child1)
+    splitIndex = random.randrange(0, num_cities)
+    select = random.randrange(0, num_cities)
+    child2 = p1[0:select+1]
+    newNodes = list(set(p1) - set(child2))
+    child2.extend(newNodes)
+    child2 = mutate(child2)
+    if fitness(child2) < fitness(child1):
+        return child2
+    else:
+        return child1
 
 
 startTime = time.time()
@@ -269,8 +273,8 @@ for i in range(0, iterations):
     for j in population.keys():
         cumulativeRelativeFitness += (worstFitness - j)/total
         theWheel.append(cumulativeRelativeFitness)
-    p1 = []
-    p2 = []
+
+    
     for j in range(0, populationSize):
         select = random.uniform(0,1)
         for k, key in enumerate(population):
