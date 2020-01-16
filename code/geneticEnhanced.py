@@ -213,9 +213,9 @@ codes_and_names = {'BF' : 'brute-force search',
 allNodes = list(range(0, num_cities))
 populationSize = 100
 population = {}
-mutateProb = 0.015
-crossoverRate = 0.7
-iterations = 40000
+mutateProb = 0.3
+crossoverRate = 1
+iterations = 10000
 random.seed()
 
 def fitness(state):
@@ -240,46 +240,35 @@ def mutate(state):
         res.extend(splice)
         res.extend(state[select2+1:])
     return res
-    # best = state
-    # bestDist = fitness(state)
-    # if select <= mutateProb:
-    #     improvement = True
-    #     while improvement:
-    #         improvement = False
-    #         for i in range(1, len(state) - 2):
-    #             for j in range(i+1, len(state)):
-    #                 if j-1 == 1:
-    #                     continue
-    #                 newPath = state[::]
-    #                 newPath[i:j] = state[j-1:i-1:-1]
-    #                 newDist = fitness(newPath)
-    #                 if(newDist < bestDist):
-    #                     best = newPath
-    #                     bestDist = newDist
-    #                     improvement = True
 
 
 
 def breed(p1, p2):
     child1 = []
+    child2 = []
     for i in range(0, num_cities):
         child1.append(-1)
+        child2.append(-1)
     select = random.randrange(0, num_cities)
     select2 = random.randrange(0, num_cities)
     if select2 < select:
         select, select2 = select2, select
     child1[0:select+1] = p1[0:select+1]
     child1[select2+1:] = p1[select2+1:]
-    unused = list(set(p2) - set(child1))
+    child2[0:select+1] = p2[0:select+1]
+    child2[select2+1:] = p2[select2+1:]
+    unused1 = list(set(p2) - set(child1))
+    unused2 = list(set(p1) - set(child2))
     for i in range(select+1, select2+1):
-        child1[i] = unused.pop(0)
-    child1 = mutate(child1)
-    # select = random.randrange(0, num_cities)
-    # child1 = p1[0:select+1]
-    # newNodes = list(set(p2) - set(child1))
-    # child1.extend(newNodes)
-    # child1 = mutate(child1)
-    return child1
+        child1[i] = unused1.pop(0)
+        child2[i] = unused2.pop(0)
+    if fitness(child2) < fitness(child1):
+        child2 = mutate(child2)
+        return child2
+    else:
+        child1 = mutate(child1)
+        return child1
+    
 
 
 startTime = time.time()
@@ -297,6 +286,7 @@ for i in range(0, iterations):
 
     fittest = min(population)
     newPopulation[fittest] = population[fittest]
+    
 
     total = 0
     for j in population.keys():
@@ -325,7 +315,11 @@ for i in range(0, iterations):
             newPopulation[fitness(child1)] = child1
         else:
             newPopulation[fitness(p1)] = p1
+
+    fittest = min(population)
+    newPopulation[fittest] = population[fittest]
     population = newPopulation.copy()
+    
 
 tour_length = min(population)
 tour = population[tour_length]

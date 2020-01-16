@@ -213,8 +213,8 @@ codes_and_names = {'BF' : 'brute-force search',
 allNodes = list(range(0, num_cities))
 populationSize = 100
 population = {}
-mutateProb = 0.015
-iterations = 40000
+mutateProb = 0.7
+iterations = 10000
 random.seed()
 
 def fitness(state):
