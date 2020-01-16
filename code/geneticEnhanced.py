@@ -213,8 +213,8 @@ codes_and_names = {'BF' : 'brute-force search',
 allNodes = list(range(0, num_cities))
 populationSize = 100
 population = {}
-mutateProb = 0.03
-crossoverRate = 0.7
+mutateProb = 0.05
+crossoverRate = 1
 iterations = 500
 random.seed()
 
@@ -226,40 +226,33 @@ def fitness(state):
     return fitness  
 
 def mutate(state):
-    if random.uniform(0, 1) <= mutateProb:
-        index1 = random.randrange(0, len(state))
-        index2 = random.randrange(0, len(state))
-        state[index1], state[index2] = state[index2], state[index1]
+    select = random.uniform(0, 1)
+    best = state
+    if select <= mutateProb:
+        improvement = True
+        while improvement:
+            improvement = False
+            for i in range(1, len(state) - 2):
+                for j in range(i+1, len(state)):
+                    if j-1 == 1:
+                        continue
+                    newPath = state[::]
+                    newPath[i:j] = state[j-1:i-1:-1]
+                    if(fitness(newPath) < fitness(best)):
+                        best = newPath
+                        improvement = True
+    return best
 
 
 
 def breed(p1, p2):
     child1 = []
-    selectIndex = random.randrange(0, num_cities)
-    selectIndex2 = selectIndex
-    while selectIndex2 == selectIndex:
-        selectIndex2 = random.randrange(0, num_cities)
-    if selectIndex2 < selectIndex:
-        selectIndex, selectIndex2 = selectIndex2, selectIndex
-    child1.extend(p1[0:selectIndex+1])
-    seg1 = p2[0:selectIndex+1]
-    seg2 = p2[selectIndex+1:selectIndex2+1]
-    seg3 = p2[selectIndex2+1:]
-    for i in seg2:
-        if i not in child1:
-            child1.append(i)
-        else:
-            for j in seg1:
-                if j not in child1:
-                    child1.append(j)
-    for i in seg3:
-        if i not in child1:
-            child1.append(i)
-        else:
-            for j in seg1:
-                if j not in child1:
-                    child1.append(j)
-    mutate(child1)
+    select = random.randrange(0, num_cities)
+    child1 = p1[0:select+1]
+    newNodes = list(set(p2) - set(child1))
+    child1.extend(newNodes)
+
+    child1 = mutate(child1)
     return child1
 
 
@@ -279,7 +272,6 @@ for i in range(0, iterations):
     fittest = min(population)
     newPopulation[fittest] = population[fittest]
 
-
     total = 0
     for j in population.keys():
         total += (worstFitness - j)
@@ -290,7 +282,7 @@ for i in range(0, iterations):
         theWheel.append(cumulativeRelativeFitness)
 
     
-    for j in range(0, populationSize-10):
+    for j in range(0, populationSize):
         select = random.uniform(0,1)
         for k, key in enumerate(population):
             if select <= theWheel[k]:
