@@ -299,7 +299,7 @@ def aStarSearch():
                 # more aggressive pruning than base due to computation costs of new heuristic               
                 if len(fringe) > 100:
                         fringe.sort(key=lambda id: id[0])
-                        fringe = fringe[0:10]
+                        fringe = fringe[0:20]
     return 0
 
 # run it all
