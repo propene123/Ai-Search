@@ -185,13 +185,13 @@ my_last_name = "Russell"
 ############    SA = simulated annealing search                                            ############
 ############    GA = genetic algorithm                                                     ############
 
-alg_code = "GA"
+alg_code = "AS"
 
 ############ you can also add a note that will be added to the end of the output file if   ############
 ############ you like, e.g., "in my basic greedy search, I broke ties by always visiting   ############
 ############ the first nearest city found" or leave it empty if you wish                   ############
 
-added_note = ""
+added_note = "prunes fringe to ensure termination"
 
 ############ the line below sets up a dictionary of codes and search names (you need do    ############
 ############ nothing unless you implement an alternative algorithm and I give you a code   ############
@@ -210,133 +210,90 @@ codes_and_names = {'BF' : 'brute-force search',
 #######################################################################################################
 ############    now the code for your algorithm should begin                               ############
 #######################################################################################################
-allNodes = list(range(0, num_cities))
-populationSize = 100
-population = {}
-mutateProb = 0.3
-crossoverRate = 0.7
-iterations = 10000
-random.seed()
+states = []
+pathCosts = []
+fringe = []
 
-def fitness(state):
-    fitness = 0
-    for i in range(0, len(state)-1):
-        fitness += distance_matrix[state[i]][state[i+1]]
-    fitness += distance_matrix[state[-1]][state[0]]
-    return fitness  
+# register a new node to the lists
+def registerNode(state, pathCost):
+    states.append(state[::])
+    pathCosts.append(pathCost)
 
-def mutate(state):
-    res = state[::]
-    chance = random.uniform(0, 1)
-    if chance <= mutateProb:
-        res = []
-        select = random.randrange(0, len(state))
-        select2 = random.randrange(0, len(state))
-        if select2 < select:
-            select, select2 = select2, select
-        splice = state[select:select2+1]
-        splice = reversed(splice)
-        res.extend(state[0:select])
-        res.extend(splice)
-        res.extend(state[select2+1:])
-    return res
+# calculate f value of a node
+def fValue(nodeId):
+    h = 0
+    state = states[nodeId][::]
+    if len(state) < num_cities - 2:
+        unvisitedNeighbours = []
+        # find unvisited neighbours
+        for i in range(0, num_cities):
+            if i not in state:
+                unvisitedNeighbours.append(i)
+        # find closest unvisited neighbour
+        nearestNeighbour = unvisitedNeighbours[0]
+        for i in unvisitedNeighbours:
+            if distance_matrix[state[-1]][i] < distance_matrix[state[-1]][nearestNeighbour]:
+                nearestNeighbour = i
+        distNeighbour = distance_matrix[state[-1]][nearestNeighbour]
+        # append to out local copy of node
+        state.append(nearestNeighbour)
+        #find new unvisited neighbours
+        unvisitedNeighbours = []
+        for i in range(0, num_cities):
+            if i not in state:
+                unvisitedNeighbours.append(distance_matrix[state[0]][i])
+        # h is dist to nearest neighbour + closest node path cost to start of tour
+        h = distNeighbour + min(unvisitedNeighbours)
+    #return g+h
+    return pathCosts[nodeId] + h
+
+# verify goal node
+def isGoalNode(nodeId):
+    return (len(states[nodeId]) == num_cities)
+
+def aStarSearch():
+    global fringe
+    newid = 0
+    registerNode([0], 0)
+    # using a heap to store fringe as it is a fast priority queue
+    heappush(fringe, (1, newid))
+    # if start node is goal node return it
+    if isGoalNode(newid):
+        return newid
+    while fringe:
+        # pop best fringe node
+        fringeid = heappop(fringe)[1]
+        # return node if it is a goal node with lowest f value
+        if isGoalNode(fringeid):
+            return fringeid
+        state = states[fringeid]
+        # create child states
+        for i in range(1, num_cities):
+            if i not in state:
+                newid += 1
+                # if we have n-1 cities we have to add pathcost back to start as well
+                if len(state) == num_cities - 1:
+                    registerNode(state + [i], pathCosts[fringeid] + distance_matrix[state[-1]][i] + distance_matrix[i][state[0]])
+                # normal case
+                else:
+                    registerNode(state + [i], pathCosts[fringeid] + distance_matrix[state[-1]][i])
+                # push to fringe
+                heappush(fringe, (fValue(newid), newid))
+                # prune the fringe if it gets too big otherwise termination becomes unfeesable above 15 cities
+                if len(fringe) > 1000:
+                    fringe = fringe[0:250]
+    return 0
+
+# run it all
+resNode = aStarSearch()
+tour = states[resNode]
+tour_length = pathCosts[resNode]
+
+
+        
 
 
 
-def breed(p1, p2):
-    child1 = []
-    child2 = []
-    for i in range(0, num_cities):
-        child1.append(-1)
-        child2.append(-1)
-    select = random.randrange(0, num_cities)
-    select2 = random.randrange(0, num_cities)
-    if select2 < select:
-        select, select2 = select2, select
-    child1[0:select+1] = p1[0:select+1]
-    child1[select2+1:] = p1[select2+1:]
-    child2[0:select+1] = p2[0:select+1]
-    child2[select2+1:] = p2[select2+1:]
-    unused1 = list(set(p2) - set(child1))
-    unused2 = list(set(p1) - set(child2))
-    for i in range(select+1, select2+1):
-        child1[i] = unused1.pop(0)
-        child2[i] = unused2.pop(0)
-    if fitness(child2) < fitness(child1):
-        child2 = mutate(child2)
-        return child2
-    else:
-        child1 = mutate(child1)
-        return child1
-    
-
-def greedy(state):
-    res = state[::]
-    if len(res) < num_cities:
-        unvisitedNeighbours = list(set(range(0, num_cities)) - set(res))
-        while unvisitedNeighbours:
-            minNeighbour = unvisitedNeighbours[0]
-            minNeighbourIndex = 0
-            for i in range(0, len(unvisitedNeighbours)):
-                if distance_matrix[res[-1]][unvisitedNeighbours[i]] < distance_matrix[res[-1]][minNeighbour]:
-                    minNeighbour = unvisitedNeighbours[i]
-                    minNeighbourIndex = i
-            res.append(minNeighbour)
-            unvisitedNeighbours.pop(minNeighbourIndex)
-    return res
-
-
-startTime = time.time()
-
-# gen initial population
-worstFitness = 0
-for i in range(0, populationSize):
-    newPop = [random.randrange(0, num_cities)]
-    newPop = greedy(newPop)
-    population[fitness(newPop)] = newPop
-for i in range(0, iterations):
-    worstFitness = max(population) + 1
-    newPopulation = {}
-
-    fittest = min(population)
-    newPopulation[fittest] = population[fittest]
-    
-
-    total = 0
-    for j in population.keys():
-        total += (worstFitness - j)
-    theWheel = []
-    cumulativeRelativeFitness = 0
-    for j in population.keys():
-        cumulativeRelativeFitness += (worstFitness - j)/total
-        theWheel.append(cumulativeRelativeFitness)
-
-    
-    for j in range(0, populationSize):
-        select = random.uniform(0,1)
-        for k, key in enumerate(population):
-            if select <= theWheel[k]:
-                p1 = population[key]
-                break
-        select = random.uniform(0,1)
-        for k, key in enumerate(population):
-            if select <= theWheel[k]:
-                p2 = population[key]
-                break
-        crossover = random.uniform(0, 1)
-        if crossover <= crossoverRate:
-            child1 = breed(p1, p2)
-            newPopulation[fitness(child1)] = child1
-        else:
-            newPopulation[fitness(p1)] = p1
-
-    fittest = min(population)
-    newPopulation[fittest] = population[fittest]
-    population = newPopulation.copy()
-    
-
-tour_length = min(population)
-tour = population[tour_length]
 
 
 
@@ -396,7 +353,7 @@ if flag == "good":
     
     
 
-print(time.time() - startTime)
+
 
 
 

@@ -185,7 +185,7 @@ my_last_name = "Russell"
 ############    SA = simulated annealing search                                            ############
 ############    GA = genetic algorithm                                                     ############
 
-alg_code = "AS"
+alg_code = "GA"
 
 ############ you can also add a note that will be added to the end of the output file if   ############
 ############ you like, e.g., "in my basic greedy search, I broke ties by always visiting   ############
@@ -210,75 +210,152 @@ codes_and_names = {'BF' : 'brute-force search',
 #######################################################################################################
 ############    now the code for your algorithm should begin                               ############
 #######################################################################################################
-states = []
-pathCosts = []
-fringe = []
+# set up initial variables
+allNodes = list(range(0, num_cities))
+populationSize = 100
+population = {}
+mutateProb = 0.3
+crossoverRate = 0.7
+iterations = 10000
+random.seed()
 
-def registerNode(state, pathCost):
-    states.append(state[::])
-    pathCosts.append(pathCost)
+# fitness is cost of tour
+def fitness(state):
+    fitness = 0
+    for i in range(0, len(state)-1):
+        fitness += distance_matrix[state[i]][state[i+1]]
+    fitness += distance_matrix[state[-1]][state[0]]
+    return fitness  
 
-def fValue(nodeId):
-    h = 0
-    state = states[nodeId][::]
-    if len(state) < num_cities - 2:
-        unvisitedNeighbours = []
-        for i in range(0, num_cities):
-            if i not in state:
-                unvisitedNeighbours.append(i)
-        nearestNeighbour = unvisitedNeighbours[0]
-        for i in unvisitedNeighbours:
-            if distance_matrix[state[-1]][i] < distance_matrix[state[-1]][nearestNeighbour]:
-                nearestNeighbour = i
-        distNeighbour = distance_matrix[state[-1]][nearestNeighbour]
-        state.append(nearestNeighbour)
-        unvisitedNeighbours = []
-        for i in range(0, num_cities):
-            if i not in state:
-                unvisitedNeighbours.append(distance_matrix[state[0]][i])
-        h = distNeighbour + min(unvisitedNeighbours)
-    return pathCosts[nodeId] + h
-
-def isGoalNode(nodeId):
-    return (len(states[nodeId]) == num_cities)
-
-def aStarSearch():
-    global fringe
-    newid = 0
-    registerNode([0], 0)
-    heappush(fringe, (1, newid))
-    # if start node is goal node return it
-    if isGoalNode(newid):
-        return newid
-    while fringe:
-        fringeid = heappop(fringe)[1]
-        # return node if it is a goal node with lowest f value
-        if isGoalNode(fringeid):
-            return fringeid
-        state = states[fringeid]
-        for i in range(1, num_cities):
-            if i not in state:
-                newid += 1
-                if len(state) == num_cities - 1:
-                    registerNode(state + [i], pathCosts[fringeid] + distance_matrix[state[-1]][i] + distance_matrix[i][state[0]])
-                else:
-                    registerNode(state + [i], pathCosts[fringeid] + distance_matrix[state[-1]][i])
-                heappush(fringe, (fValue(newid), newid))
-                if len(fringe) > 1000:
-                    fringe = fringe[0:250]
-    return 0
-
-startTime = time.time()
-
-resNode = aStarSearch()
-tour = states[resNode]
-tour_length = pathCosts[resNode]
+# mutate function reverse a substring in the individual
+def mutate(state):
+    res = state[::]
+    # check if we should mutate
+    chance = random.uniform(0, 1)
+    if chance <= mutateProb:
+        res = []
+        # select start and end of substring
+        select = random.randrange(0, len(state))
+        select2 = random.randrange(0, len(state))
+        if select2 < select:
+            select, select2 = select2, select
+        # select and reverse substring
+        splice = state[select:select2+1]
+        splice = reversed(splice)
+        # put individual back together
+        res.extend(state[0:select])
+        res.extend(splice)
+        res.extend(state[select2+1:])
+    return res
 
 
-        
+# breed function using Ordered Crossover (OX)
+def breed(p1, p2):
+    child1 = []
+    child2 = []
+    # pad 2 children with dummy nodes
+    for i in range(0, num_cities):
+        child1.append(-1)
+        child2.append(-1)
+    # select 2 points to split parents at
+    select = random.randrange(0, num_cities)
+    select2 = random.randrange(0, num_cities)
+    if select2 < select:
+        select, select2 = select2, select
+    # outer segments of p1 are added to child1
+    child1[0:select+1] = p1[0:select+1]
+    child1[select2+1:] = p1[select2+1:]
+    # outer segments of p2 are added to child2
+    child2[0:select+1] = p2[0:select+1]
+    child2[select2+1:] = p2[select2+1:]
+    # find unused nodes from p1 and p2
+    unused1 = list(set(p2) - set(child1))
+    unused2 = list(set(p1) - set(child2))
+    # add unused p2 nodes to child1 and p1 nodes to child2
+    for i in range(select+1, select2+1):
+        child1[i] = unused1.pop(0)
+        child2[i] = unused2.pop(0)
+    # return fittest child
+    if fitness(child2) < fitness(child1):
+        child2 = mutate(child2)
+        return child2
+    else:
+        child1 = mutate(child1)
+        return child1
+    
+# greedy heuristic to generate initial population
+def greedy(state):
+    res = state[::]
+    if len(res) < num_cities:
+        unvisitedNeighbours = list(set(range(0, num_cities)) - set(res))
+        while unvisitedNeighbours:
+            minNeighbour = unvisitedNeighbours[0]
+            minNeighbourIndex = 0
+            for i in range(0, len(unvisitedNeighbours)):
+                if distance_matrix[res[-1]][unvisitedNeighbours[i]] < distance_matrix[res[-1]][minNeighbour]:
+                    minNeighbour = unvisitedNeighbours[i]
+                    minNeighbourIndex = i
+            res.append(minNeighbour)
+            unvisitedNeighbours.pop(minNeighbourIndex)
+    return res
 
 
 
+worstFitness = 0
+# gen initial pop by running greedy from random cities
+for i in range(0, populationSize):
+    newPop = [random.randrange(0, num_cities)]
+    newPop = greedy(newPop)
+    population[fitness(newPop)] = newPop
+for i in range(0, iterations):
+    # create constant o calculate propabbility of selection
+    worstFitness = max(population) + 1
+    newPopulation = {}
+    # add fittest of old population to new population
+    fittest = min(population)
+    newPopulation[fittest] = population[fittest]
+    total = 0
+    # get total of constant - fitness so we can maximise
+    for j in population.keys():
+        total += (worstFitness - j)
+    theWheel = []
+    cumulativeRelativeFitness = 0
+    # create "the wheel" of cumulatitive probabilities
+    for j in population.keys():
+        cumulativeRelativeFitness += (worstFitness - j)/total
+        theWheel.append(cumulativeRelativeFitness)
+    # create |P| children
+    for j in range(0, populationSize):
+        select = random.uniform(0,1)
+        # select p1
+        for k, key in enumerate(population):
+            if select <= theWheel[k]:
+                p1 = population[key]
+                break
+        select = random.uniform(0,1)
+        # select p2
+        for k, key in enumerate(population):
+            if select <= theWheel[k]:
+                p2 = population[key]
+                break
+        # only breed if chance allows it
+        crossover = random.uniform(0, 1)
+        if crossover <= crossoverRate:
+            # breed child
+            child1 = breed(p1, p2)
+            newPopulation[fitness(child1)] = child1
+        else:
+            # add p1 back into population
+            newPopulation[fitness(p1)] = p1
+    # add old fittest into new population
+    fittest = min(population)
+    newPopulation[fittest] = population[fittest]
+    # population becomes new population
+    population = newPopulation.copy()
+    
+# get best tour from population
+tour_length = min(population)
+tour = population[tour_length]
 
 
 
@@ -337,8 +414,6 @@ if flag == "good":
     print("I have successfully written the tour to the output file " + output_file_name + ".")
     
     
-print(time.time() - startTime)
-
 
 
 

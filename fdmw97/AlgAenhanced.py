@@ -185,7 +185,7 @@ my_last_name = "Russell"
 ############    SA = simulated annealing search                                            ############
 ############    GA = genetic algorithm                                                     ############
 
-alg_code = "GA"
+alg_code = "AS"
 
 ############ you can also add a note that will be added to the end of the output file if   ############
 ############ you like, e.g., "in my basic greedy search, I broke ties by always visiting   ############
@@ -210,88 +210,109 @@ codes_and_names = {'BF' : 'brute-force search',
 #######################################################################################################
 ############    now the code for your algorithm should begin                               ############
 #######################################################################################################
-allNodes = list(range(0, num_cities))
-populationSize = 100
-population = {}
-mutateProb = 0.7
-iterations = 10000
-random.seed()
+states = []
+pathCosts = []
+fringe = []
 
-def fitness(state):
-    fitness = 0
-    for i in range(0, len(state)-1):
-        fitness += distance_matrix[state[i]][state[i+1]]
-    fitness += distance_matrix[state[-1]][state[0]]
-    return fitness  
+# register a new node
+def registerNode(state, pathCost):
+    states.append(state[::])
+    pathCosts.append(pathCost)
 
-def mutate(state):
-    res = state[::]
-    if random.uniform(0, 1) <= mutateProb:
-        index1 = random.randrange(0, len(res))
-        index2 = random.randrange(0, len(res))
-        res[index1], res[index2] = res[index2], res[index1]
-    return res
+# f value is calculated using greedy heuristic
+def fValue(nodeId):
+    h = 0
+    state = states[nodeId][::]
+    if len(state) < num_cities:
+        unvisitedNeighbours = list(set(range(0, num_cities)) - set(state))
+        while unvisitedNeighbours:
+            minNeighbour = unvisitedNeighbours[0]
+            minNeighbourIndex = 0
+            for i in range(0, len(unvisitedNeighbours)):
+                if distance_matrix[state[-1]][unvisitedNeighbours[i]] < distance_matrix[state[-1]][minNeighbour]:
+                    minNeighbour = unvisitedNeighbours[i]
+                    minNeighbourIndex = i
+            h += distance_matrix[state[-1]][minNeighbour]
+            state.append(minNeighbour)
+            unvisitedNeighbours.pop(minNeighbourIndex)
+        h += distance_matrix[state[-1]][0]
+    # return greedy heuristic plus current tour cost
+    return pathCosts[nodeId] + h
 
+# calculate current length of a path
+def length(path):
+    length = 0;
+    for i in range(0, len(path)-1):
+        length += distance_matrix[path[i]][path[i+1]]
+    length += distance_matrix[path[-1]][path[0]]
+    return length
 
+# The mighty 2-opt, cheap cheerful local optimisation algorithm squeeze some improvements
+# Removes 2 edges from the tour and tries to put the segments back together to see if it can be improved
+def optTour(state):
+    best = state
+    improvement = True
+    while improvement:
+        improvement = False
+        for i in range(1, len(state) - 1):
+            for j in range(i+1, len(state)):
+                newPath = []
+                newPath.extend(state[0:i])
+                reversedSeg = list(reversed(state[i:j+1]))
+                newPath.extend(reversedSeg)
+                newPath.extend(state[j+1:])
+                if(length(newPath) < length(best)):
+                    best = newPath
+                    improvement = True
+    return best
+            
+# verify is goal node
+def isGoalNode(nodeId):
+    return (len(states[nodeId]) == num_cities)
 
-def breed(p1, p2):
-    splitIndex = random.randrange(0, num_cities)
-    select = random.randrange(0, num_cities)
-    child1 = p1[0:select+1]
-    newNodes = list(set(p2) - set(child1))
-    child1.extend(newNodes)
-    child1 = mutate(child1)
-    splitIndex = random.randrange(0, num_cities)
-    select = random.randrange(0, num_cities)
-    child2 = p1[0:select+1]
-    newNodes = list(set(p1) - set(child2))
-    child2.extend(newNodes)
-    child2 = mutate(child2)
-    if fitness(child2) < fitness(child1):
-        return child2
-    else:
-        return child1
+def aStarSearch():
+    global fringe
+    newid = 0
+    registerNode([0], 0)
+    heappush(fringe, (1, 1, newid))
+    # if start node is goal node return it
+    if isGoalNode(newid):
+        return newid
+    while fringe:
+        fringeid = heappop(fringe)[2]
+        # return node if it is a goal node with lowest f value
+        if isGoalNode(fringeid):
+            return fringeid
+        state = states[fringeid]
+        # expand fringe nodes
+        for i in range(1, num_cities):
+            if i not in state:
+                newid += 1
+                # take into account loop back to start for n-1 cities
+                if len(state) == num_cities - 1:
+                    registerNode(state + [i], pathCosts[fringeid] + distance_matrix[state[-1]][i] + distance_matrix[i][state[0]])
+                else:
+                    #normal case
+                    registerNode(state + [i], pathCosts[fringeid] + distance_matrix[state[-1]][i])
+                # push to fringe
+                heappush(fringe, (fValue(newid), 1/len(states[newid]), newid))
+                # more aggressive pruning than base due to computation costs of new heuristic               
+                if len(fringe) > 100:
+                        fringe.sort(key=lambda id: id[0])
+                        fringe = fringe[0:10]
+    return 0
 
-
-startTime = time.time()
-
-# gen initial population
-worstFitness = 0
-for i in range(0, populationSize):
-    newPop = allNodes[::]
-    random.shuffle(newPop)
-    newFitness = fitness(newPop)
-    population[newFitness] = newPop
-for i in range(0, iterations):
-    worstFitness = max(population) + 1
-    newPopulation = {}
-    total = 0
-    for j in population.keys():
-        total += (worstFitness - j)
-    theWheel = []
-    cumulativeRelativeFitness = 0
-    for j in population.keys():
-        cumulativeRelativeFitness += (worstFitness - j)/total
-        theWheel.append(cumulativeRelativeFitness)
+# run it all
+resNode = aStarSearch()
+tour = states[resNode]
+# 2-opt final tour to get a final boost
+tour = optTour(tour)
+tour_length = length(tour)
 
     
-    for j in range(0, populationSize):
-        select = random.uniform(0,1)
-        for k, key in enumerate(population):
-            if select <= theWheel[k]:
-                p1 = population[key]
-                break
-        select = random.uniform(0,1)
-        for k, key in enumerate(population):
-            if select <= theWheel[k]:
-                p2 = population[key]
-                break
-        child1 = breed(p1, p2)
-        newPopulation[fitness(child1)] = child1
-    population = newPopulation.copy()
 
-tour_length = min(population)
-tour = population[tour_length]
+
+
 
 
 
@@ -351,7 +372,7 @@ if flag == "good":
     
     
 
-print(time.time() - startTime)
+
 
 
 
